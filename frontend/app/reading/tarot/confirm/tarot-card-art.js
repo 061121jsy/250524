@@ -119,6 +119,165 @@ function FooterPlate({ name, keyword, accent }) {
   );
 }
 
+function getKeywordProfile(keyword, isMajor, themeOrSuit) {
+  const text = `${keyword || ""}`;
+  if (/(새 출발|시작|성공|각성|완성)/.test(text)) {
+    return { accent: "#7c4dff", secondary: "#ffe08a", pattern: "rays" };
+  }
+  if (/(풍요|현실|금전|재물|안정)/.test(text)) {
+    return { accent: "#d98920", secondary: "#fff0b5", pattern: "coins" };
+  }
+  if (/(직감|불안|성찰|멈춤|내적 힘)/.test(text)) {
+    return { accent: "#7857c5", secondary: "#f1e4ff", pattern: "moon" };
+  }
+  if (/(선택|균형|판단|질서|전통)/.test(text)) {
+    return { accent: "#2d6f8f", secondary: "#cfe9f5", pattern: "split" };
+  }
+  if (/(조화|감정|사랑|애정|관계)/.test(text)) {
+    return { accent: "#d85b84", secondary: "#ffd5e4", pattern: "petals" };
+  }
+  if (/(붕괴|충돌|집착|종결|위기)/.test(text)) {
+    return { accent: "#bb4e3b", secondary: "#ffe0c9", pattern: "shards" };
+  }
+  if (/(돌파|실행력|열정|행동|전진)/.test(text)) {
+    return { accent: "#eb7e2f", secondary: "#fff0b8", pattern: "arrows" };
+  }
+  if (/(희망|빛|축복|회복)/.test(text)) {
+    return { accent: "#d4a02d", secondary: "#fff6bf", pattern: "stars" };
+  }
+
+  if (isMajor) {
+    return {
+      accent: themeOrSuit === "moon" ? "#7d64c9" : "#cf7a2b",
+      secondary: themeOrSuit === "moon" ? "#e8dfff" : "#ffe7b4",
+      pattern: themeOrSuit === "moon" ? "moon" : "sun",
+    };
+  }
+
+  return {
+    accent:
+      themeOrSuit === "cups"
+        ? "#c84f82"
+        : themeOrSuit === "swords"
+          ? "#52789b"
+          : themeOrSuit === "pentacles"
+            ? "#c58a2d"
+            : "#d66f28",
+    secondary:
+      themeOrSuit === "cups"
+        ? "#ffd4e4"
+        : themeOrSuit === "swords"
+          ? "#dce9f5"
+          : themeOrSuit === "pentacles"
+            ? "#ffefba"
+            : "#ffe6c0",
+    pattern:
+      themeOrSuit === "cups"
+        ? "petals"
+        : themeOrSuit === "swords"
+          ? "shards"
+          : themeOrSuit === "pentacles"
+            ? "coins"
+            : "rays",
+  };
+}
+
+function PatternBackdrop({ kind, accent, secondary }) {
+  if (kind === "coins") {
+    return (
+      <g opacity="0.9">
+        {Array.from({ length: 8 }).map((_, index) => {
+          const angle = (Math.PI * 2 * index) / 8 - Math.PI / 2;
+          const radius = 154;
+          const x = 180 + Math.cos(angle) * radius;
+          const y = 220 + Math.sin(angle) * radius;
+          return <circle key={`coin-${index}`} cx={x} cy={y} r="10" fill={secondary} opacity="0.55" stroke={accent} strokeWidth="2" />;
+        })}
+      </g>
+    );
+  }
+
+  if (kind === "moon") {
+    return (
+      <g opacity="0.8" fill="none" stroke={secondary} strokeWidth="2">
+        <path d="M116 150c20-18 40-26 64-26s44 8 64 26" />
+        <path d="M116 290c20 18 40 26 64 26s44-8 64-26" />
+        <circle cx="96" cy="220" r="18" fill={secondary} opacity="0.5" />
+        <circle cx="264" cy="220" r="18" fill={secondary} opacity="0.5" />
+      </g>
+    );
+  }
+
+  if (kind === "split") {
+    return (
+      <g opacity="0.82" fill="none" stroke={secondary} strokeWidth="2">
+        <path d="M114 176h52" />
+        <path d="M194 176h52" />
+        <path d="M114 264h52" />
+        <path d="M194 264h52" />
+        <path d="M156 176c10 18 10 34 0 52" />
+        <path d="M204 176c-10 18-10 34 0 52" />
+      </g>
+    );
+  }
+
+  if (kind === "petals") {
+    return (
+      <g opacity="0.82" fill={secondary} stroke={accent} strokeWidth="1.6">
+        {Array.from({ length: 6 }).map((_, index) => {
+          const angle = (Math.PI * 2 * index) / 6 - Math.PI / 2;
+          const x = 180 + Math.cos(angle) * 118;
+          const y = 220 + Math.sin(angle) * 118;
+          return <path key={`petal-${index}`} d={`M${x} ${y}c8-18 24-18 32 0-8 18-24 18-32 0z`} />;
+        })}
+      </g>
+    );
+  }
+
+  if (kind === "shards") {
+    return (
+      <g opacity="0.8" fill={secondary} stroke={accent} strokeWidth="1.6">
+        <path d="M96 168l42 18-28 40-30-18z" />
+        <path d="M264 168l-42 18 28 40 30-18z" />
+        <path d="M96 292l42-18-28-40-30 18z" />
+        <path d="M264 292l-42-18 28-40 30 18z" />
+      </g>
+    );
+  }
+
+  if (kind === "arrows") {
+    return (
+      <g opacity="0.85" fill="none" stroke={secondary} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M108 220h42" />
+        <path d="M222 220h42" />
+        <path d="M150 188l-20 32 20 32" />
+        <path d="M210 188l20 32-20 32" />
+      </g>
+    );
+  }
+
+  if (kind === "stars" || kind === "sun" || kind === "rays") {
+    return (
+      <g opacity="0.85" fill={secondary}>
+        {Array.from({ length: 10 }).map((_, index) => {
+          const angle = (Math.PI * 2 * index) / 10 - Math.PI / 2;
+          const radius = 150;
+          const x = 180 + Math.cos(angle) * radius;
+          const y = 220 + Math.sin(angle) * radius;
+          return <path key={`ray-${index}`} d={`M${x} ${y}l4 8 8 4-8 4-4 8-4-8-8-4 8-4z`} />;
+        })}
+      </g>
+    );
+  }
+
+  return (
+    <g opacity="0.85" fill="none" stroke={secondary} strokeWidth="2">
+      <circle cx="180" cy="220" r="144" />
+      <circle cx="180" cy="220" r="120" opacity="0.7" />
+    </g>
+  );
+}
+
 function MajorMotif({ theme, color }) {
   const props = {
     fill: "none",
@@ -505,14 +664,96 @@ function CardHalo({ accent }) {
   );
 }
 
+function KeywordSignal({ kind, accent, secondary }) {
+  if (kind === "coins") {
+    return (
+      <g opacity="0.9">
+        <circle cx="180" cy="220" r="28" fill={secondary} opacity="0.76" stroke={accent} strokeWidth="2.2" />
+        <path d="M180 198v44" fill="none" stroke={accent} strokeWidth="3" strokeLinecap="round" />
+        <path d="M158 220h44" fill="none" stroke={accent} strokeWidth="3" strokeLinecap="round" />
+      </g>
+    );
+  }
+
+  if (kind === "moon") {
+    return (
+      <g opacity="0.88">
+        <path d="M192 184c-14 5-24 18-24 34 0 20 16 36 36 36 7 0 14-2 19-5-9 18-27 30-48 30-28 0-52-24-52-52s24-52 52-52c8 0 15 2 22 6-1 4-1 8-2 11z" fill={secondary} opacity="0.76" />
+        <circle cx="242" cy="192" r="7" fill={accent} />
+      </g>
+    );
+  }
+
+  if (kind === "split") {
+    return (
+      <g opacity="0.86" fill="none" stroke={accent} strokeWidth="2.4" strokeLinecap="round">
+        <path d="M180 158v124" />
+        <path d="M150 220h60" />
+        <path d="M128 190c24-18 80-18 104 0" />
+        <path d="M128 250c24 18 80 18 104 0" />
+      </g>
+    );
+  }
+
+  if (kind === "petals") {
+    return (
+      <g opacity="0.88" fill={secondary} stroke={accent} strokeWidth="2">
+        <circle cx="180" cy="220" r="18" />
+        {Array.from({ length: 6 }).map((_, index) => {
+          const angle = (Math.PI * 2 * index) / 6 - Math.PI / 2;
+          const x = 180 + Math.cos(angle) * 48;
+          const y = 220 + Math.sin(angle) * 48;
+          return <path key={`leaf-${index}`} d={`M${x} ${y}c8-10 18-10 26 0-8 10-18 10-26 0z`} />;
+        })}
+      </g>
+    );
+  }
+
+  if (kind === "shards") {
+    return (
+      <g opacity="0.88" fill={secondary} stroke={accent} strokeWidth="2">
+        <path d="M180 136l26 56-26 28-26-28z" />
+        <path d="M180 304l26-56-26-28-26 28z" />
+      </g>
+    );
+  }
+
+  if (kind === "arrows") {
+    return (
+      <g opacity="0.88" fill="none" stroke={accent} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M180 124v72" />
+        <path d="M180 268v72" />
+        <path d="M158 158l22-18 22 18" />
+        <path d="M158 302l22 18 22-18" />
+      </g>
+    );
+  }
+
+  if (kind === "stars" || kind === "sun" || kind === "rays") {
+    return (
+      <g opacity="0.95" fill="none" stroke={accent} strokeWidth="2.8" strokeLinecap="round">
+        <circle cx="180" cy="220" r="46" />
+        <path d="M180 148v38" />
+        <path d="M180 254v38" />
+        <path d="M108 220h38" />
+        <path d="M214 220h38" />
+      </g>
+    );
+  }
+
+  return null;
+}
+
 export default function TarotCardArt({ card }) {
   const isMajor = card.number < 22;
   const palette = palettes[card.palette] || palettes.sun;
   const suit = isMajor ? null : card.id.split("-")[0];
   const rank = isMajor ? null : card.id.split("-")[1];
   const value = isMajor ? card.number : card.roman;
-  const accent = "rgba(61, 34, 16, 0.95)";
   const keyword = card.keyword || card.subtitle || card.name;
+  const keywordProfile = getKeywordProfile(keyword, isMajor, isMajor ? card.theme : suit);
+  const accent = keywordProfile.accent;
+  const secondary = keywordProfile.secondary;
   const ringCount = isMajor ? 14 : Math.min(rankValue(rank), 10);
 
   return (
@@ -538,6 +779,7 @@ export default function TarotCardArt({ card }) {
       <rect x="34" y="34" width="292" height="492" rx="22" fill={`url(#panel-${card.id})`} stroke="rgba(63,38,18,0.12)" />
 
       <rect x="44" y="44" width="272" height="472" rx="18" fill="url(#glow-${card.id})" />
+      <PatternBackdrop kind={keywordProfile.pattern} accent={accent} secondary={secondary} />
       <FrameRings accent={accent} />
       <CardHalo accent={accent} />
       <TitlePlate value={value} accent={accent} />
@@ -554,15 +796,13 @@ export default function TarotCardArt({ card }) {
           const radius = 150;
           const x = 180 + Math.cos(angle) * radius;
           const y = 220 + Math.sin(angle) * radius;
-          return <Gem key={`${card.id}-gem-${index}`} x={x} y={y} color="rgba(255,255,255,0.75)" />;
+          return <Gem key={`${card.id}-gem-${index}`} x={x} y={y} color={index % 2 === 0 ? secondary : "rgba(255,255,255,0.75)"} />;
         })}
       </g>
 
-      {isMajor ? (
-        <MajorMotif theme={card.theme} color={accent} />
-      ) : (
-        <MinorMotif suit={suit} rank={rank} color={accent} />
-      )}
+      {isMajor ? <MajorMotif theme={card.theme} color={accent} /> : <MinorMotif suit={suit} rank={rank} color={accent} />}
+
+      <KeywordSignal kind={keywordProfile.pattern} accent={accent} secondary={secondary} />
 
       <g opacity="0.8">
         {Array.from({ length: ringCount }).map((_, index) => {
