@@ -1,0 +1,49 @@
+<svg width="1600" height="900" viewBox="0 0 1600 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1600" y2="900" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#050403"/>
+      <stop offset="0.45" stop-color="#110D0A"/>
+      <stop offset="1" stop-color="#201711"/>
+    </linearGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="0" y2="1" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#20150E"/>
+      <stop offset="1" stop-color="#0F0C09"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(800 430) rotate(90) scale(330 500)">
+      <stop stop-color="#F1CC7A" stop-opacity="0.48"/>
+      <stop offset="1" stop-color="#F1CC7A" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="moon" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1170 170) rotate(90) scale(120 130)">
+      <stop stop-color="#F6DEAA"/>
+      <stop offset="1" stop-color="#C58A36"/>
+    </radialGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#bg)"/>
+  <rect x="70" y="60" width="1460" height="780" rx="40" fill="url(#glow)" opacity="0.65"/>
+  <circle cx="1200" cy="180" r="118" fill="url(#moon)" opacity="0.9"/>
+  <circle cx="1200" cy="180" r="82" fill="#120D09" opacity="0.7"/>
+  <path d="M1200 104C1222 136 1240 157 1270 171C1239 188 1221 214 1200 248C1179 214 1161 188 1130 171C1160 157 1178 136 1200 104Z" fill="#F4E1B0" opacity="0.72"/>
+  <g opacity="0.9">
+    <rect x="280" y="220" width="220" height="360" rx="22" fill="url(#card)" stroke="#E3B45F" stroke-opacity="0.48" stroke-width="2"/>
+    <rect x="690" y="170" width="220" height="410" rx="22" fill="url(#card)" stroke="#E3B45F" stroke-opacity="0.62" stroke-width="2.5"/>
+    <rect x="1100" y="220" width="220" height="360" rx="22" fill="url(#card)" stroke="#E3B45F" stroke-opacity="0.48" stroke-width="2"/>
+    <rect x="315" y="260" width="150" height="280" rx="16" fill="none" stroke="#E3B45F" stroke-opacity="0.25" stroke-width="1.4"/>
+    <rect x="725" y="210" width="150" height="330" rx="16" fill="none" stroke="#E3B45F" stroke-opacity="0.28" stroke-width="1.4"/>
+    <rect x="1135" y="260" width="150" height="280" rx="16" fill="none" stroke="#E3B45F" stroke-opacity="0.25" stroke-width="1.4"/>
+    <path d="M800 150C828 208 850 250 900 280C848 308 830 352 800 410C770 352 752 308 700 280C750 250 772 208 800 150Z" fill="#F1CC7A" fill-opacity="0.65"/>
+    <circle cx="800" cy="410" r="60" stroke="#F1CC7A" stroke-opacity="0.5" stroke-width="3"/>
+  </g>
+  <g opacity="0.7" stroke="#E3B45F" stroke-opacity="0.14">
+    <path d="M130 760C280 690 370 690 520 760"/>
+    <path d="M540 740C690 670 830 670 980 740"/>
+    <path d="M1000 760C1150 690 1240 690 1390 760"/>
+  </g>
+  <g opacity="0.45">
+    <circle cx="290" cy="140" r="4" fill="#F1CC7A"/>
+    <circle cx="360" cy="110" r="3" fill="#F1CC7A"/>
+    <circle cx="430" cy="170" r="2.5" fill="#F1CC7A"/>
+    <circle cx="1260" cy="120" r="3.5" fill="#F1CC7A"/>
+    <circle cx="1360" cy="145" r="2.5" fill="#F1CC7A"/>
+    <circle cx="1120" cy="100" r="2.8" fill="#F1CC7A"/>
+  </g>
+</svg>

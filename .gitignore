@@ -1,0 +1,43 @@
+# environment
+**/.env
+!**/.env.example
+**/.env.local
+**/.env.development
+**/.env.production
+
+# dependencies / build output
+**/node_modules/
+frontend/.next/
+frontend/build/
+backend/dist/
+dist/
+build/
+out/
+.next/
+
+# generated / runtime data
+backend/data/
+SCREENSHOT/
+*.log
+*.out
+*.err
+*.pid
+*.seed
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+
+# secrets and keys
+*.key
+*.pem
+*.p12
+*.pfx
+*.crt
+
+# misc caches
+.cache/
+coverage/
