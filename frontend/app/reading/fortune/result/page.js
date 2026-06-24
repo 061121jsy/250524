@@ -17,12 +17,12 @@ function fallbackReading() {
     },
     response: {
       headline: "운세 결과가 없습니다",
-      summary: "운세 입력 화면에서 결과를 먼저 생성하세요.",
+      summary: "운세 입력 화면에서 먼저 결과를 생성해 주세요.",
       sections: topicOrder.map((label) => ({ label, value: "입력 정보가 없습니다." })),
       lucky: { color: "-", number: "-", direction: "-", item: "-" },
-      fortuneCookie: "결과를 먼저 생성하세요.",
-      advice: "운세 입력 화면으로 돌아가 결과를 생성하세요.",
-      caution: "운세 결과는 참고용입니다.",
+      fortuneCookie: "결과를 생성한 뒤 다시 확인해 주세요.",
+      advice: "입력 정보를 넣고 다시 생성하면 상세한 운세를 볼 수 있습니다.",
+      caution: "이 결과는 참고용입니다.",
     },
   };
 }
@@ -57,12 +57,12 @@ function normalizeSections(response) {
 
 export default function FortuneResultPage() {
   const [reading, setReading] = useState(null);
-  const [activeLabel, setActiveLabel] = useState("총운");
+  const [activeLabel, setActiveLabel] = useState(topicOrder[0]);
 
   useEffect(() => {
     const nextReading = loadReading();
     setReading(nextReading);
-    setActiveLabel(nextReading.response?.sections?.[0]?.label || "총운");
+    setActiveLabel(nextReading.response?.sections?.[0]?.label || topicOrder[0]);
   }, []);
 
   const insight = useMemo(() => {
@@ -82,7 +82,7 @@ export default function FortuneResultPage() {
         month: "이달의 운세",
       }),
       fortuneType: labelOf(request.fortuneType, {
-        general: "기본 운세",
+        general: "운세 종류",
         zodiacAnimal: "띠별 운세",
         constellation: "별자리 운세",
         fortuneCookie: "포춘쿠키",
@@ -96,9 +96,9 @@ export default function FortuneResultPage() {
         return acc;
       }, {}),
       lucky: response.lucky || fallbackReading().response.lucky,
-      fortuneCookie: response.fortuneCookie,
-      advice: response.advice,
-      caution: response.caution,
+      fortuneCookie: response.fortuneCookie || fallbackReading().response.fortuneCookie,
+      advice: response.advice || fallbackReading().response.advice,
+      caution: response.caution || fallbackReading().response.caution,
       saved: reading.saved,
       provider: reading.provider,
       model: reading.model,
@@ -120,7 +120,7 @@ export default function FortuneResultPage() {
 
   return (
     <main className="reading-shell">
-      <section className="reading-card saju-result-card">
+      <section className="reading-card">
         <p className="eyebrow">fortune result</p>
         <h1>{insight.headline}</h1>
         <p className="lead">{insight.summary}</p>
@@ -131,86 +131,77 @@ export default function FortuneResultPage() {
             <strong>{insight.name}</strong>
           </div>
           <div>
-            <span>운세</span>
-            <strong>{insight.period}</strong>
+            <span>생년월일</span>
+            <strong>{insight.birth || "입력 없음"}</strong>
           </div>
           <div>
-            <span>종류</span>
-            <strong>{insight.fortuneType}</strong>
+            <span>상태</span>
+            <strong>{insight.provider === "openai" ? "OpenAI" : "로컬"}</strong>
+          </div>
+          <div>
+            <span>모델</span>
+            <strong>{insight.model || "-"}</strong>
           </div>
         </div>
 
-        <p className="section-note">
-          {insight.saved ? "로그인/결제 확인으로 DB에 저장되었습니다." : "로그인 및 결제 완료 상태가 아니어서 저장하지 않았습니다."}
-          {insight.model ? ` 사용 모델: ${insight.model}` : ""}
-        </p>
-
-        <div className="fortune-result-tabs" role="tablist" aria-label="생성된 운세 항목">
-          {insight.sections.map((section) => (
+        <div className="fortune-tabs">
+          {insight.sections.map((item) => (
             <button
-              key={section.label}
+              key={item.label}
               type="button"
-              className={`fortune-tab ${activeSection.label === section.label ? "active" : ""}`}
-              onClick={() => setActiveLabel(section.label)}
+              className={`fortune-tab ${activeLabel === item.label ? "active" : ""}`}
+              onClick={() => setActiveLabel(item.label)}
             >
-              {section.label}
+              {item.label}
             </button>
           ))}
         </div>
 
-        <article className="fortune-result-detail">
-          <p className="result-kicker">선택한 항목</p>
-          <h2>{activeSection.label}</h2>
-          <p>{activeValue}</p>
-        </article>
+        <div className="result-card" style={{ marginTop: 16 }}>
+          <p>{activeSection.label}</p>
+          <strong>{activeValue}</strong>
+        </div>
+
+        <div className="result-matrix">
+          {insight.sections.map((item) => (
+            <article className="result-card" key={item.label}>
+              <p>{item.label}</p>
+              <strong>{item.value}</strong>
+            </article>
+          ))}
+        </div>
 
         <div className="fortune-lucky-grid">
           <article className="stack-item">
-            <strong>행운 색</strong>
+            <strong>행운의 색</strong>
             <span>{insight.lucky.color}</span>
           </article>
           <article className="stack-item">
-            <strong>행운 숫자</strong>
+            <strong>행운의 숫자</strong>
             <span>{insight.lucky.number}</span>
           </article>
           <article className="stack-item">
-            <strong>행운 방향</strong>
+            <strong>행운의 방향</strong>
             <span>{insight.lucky.direction}</span>
           </article>
           <article className="stack-item">
-            <strong>행운 아이템</strong>
+            <strong>행운의 아이템</strong>
             <span>{insight.lucky.item}</span>
           </article>
-          <article className="stack-item">
-            <strong>포춘쿠키</strong>
-            <span>{insight.fortuneCookie}</span>
-          </article>
-          <article className="stack-item">
-            <strong>조언</strong>
-            <span>{insight.advice}</span>
-          </article>
         </div>
 
-        <div className="result-bands">
-          <article className="stack-item">
-            <strong>주의점</strong>
-            <span>{insight.caution}</span>
-          </article>
-          <article className="stack-item">
-            <strong>생성 방식</strong>
-            <span>{insight.provider === "openai" ? "OpenAI API 생성" : "로컬 대체 생성"}</span>
-          </article>
+        <div className="fortune-cookie">
+          <p className="eyebrow">포춘쿠키 메시지</p>
+          <strong>{insight.fortuneCookie}</strong>
         </div>
 
-        <div className="auth-actions">
-          <Link className="primary" href="/reading/fortune">
-            다시 생성
-          </Link>
-          <Link className="ghost" href="/reading/tarot">
-            타로 보기
-          </Link>
-          <Link className="ghost" href="/">
-            홈으로
+        <div className="result-footer">
+          <div>
+            <p className="section-note">{insight.advice}</p>
+            <p className="section-note">{insight.caution}</p>
+          </div>
+          <Link className="ghost" href="/reading/fortune">
+            다시 보기
           </Link>
         </div>
       </section>

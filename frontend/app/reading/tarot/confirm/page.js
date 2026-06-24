@@ -43,6 +43,14 @@ function getMockAuthHeaders() {
   }
 }
 
+function getReadingsUrl(apiBase, kind) {
+  if (apiBase.includes("/functions/v1")) {
+    return `${apiBase}/readings?kind=${kind}`;
+  }
+
+  return `${apiBase}/api/${kind}/readings`;
+}
+
 export default function TarotConfirmPage() {
   const router = useRouter();
   const [draft, setDraft] = useState(null);
@@ -78,7 +86,7 @@ export default function TarotConfirmPage() {
 
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4001";
-      const response = await fetch(`${apiBase}/api/tarot/readings`, {
+      const response = await fetch(getReadingsUrl(apiBase, "tarot"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

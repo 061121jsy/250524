@@ -25,6 +25,14 @@ function getMockAuthHeaders() {
   }
 }
 
+function getReadingsUrl(apiBase, kind) {
+  if (apiBase.includes("/functions/v1")) {
+    return `${apiBase}/readings?kind=${kind}`;
+  }
+
+  return `${apiBase}/api/${kind}/readings`;
+}
+
 export default function SajuPage() {
   const router = useRouter();
   const gateRef = useRef(null);
@@ -72,7 +80,7 @@ export default function SajuPage() {
 
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4001";
-      const response = await fetch(`${apiBase}/api/saju/readings`, {
+      const response = await fetch(getReadingsUrl(apiBase, "saju"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
