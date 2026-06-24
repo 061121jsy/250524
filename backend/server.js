@@ -8,6 +8,9 @@ loadEnv(path.join(__dirname, ".env"));
 const port = process.env.PORT || 4001;
 const dataDir = path.join(__dirname, "data");
 const openaiModel = process.env.OPENAI_MODEL || "gpt-5.4-mini";
+const supabaseUrl = (process.env.SUPABASE_URL || "").replace(/\/$/, "");
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+const useSupabase = Boolean(supabaseUrl && supabaseServiceKey);
 
 const dbPaths = {
   tarot: path.join(dataDir, "tarot-readings.json"),
@@ -72,7 +75,53 @@ async function readBody(req) {
   return raw ? JSON.parse(raw) : {};
 }
 
-async function readDb(dbPath) {
+async function readDb(kind, userId) {
+  if (useSupabase) {
+    const url = new URL(`${supabaseUrl}/rest/v1/readings`);
+    url.searchParams.set("select", "*");
+    url.searchParams.set("kind", `eq.${kind}`);
+    url.searchParams.set("saved", "eq.true");
+    if (userId) {
+      url.searchParams.set("user_id", `eq.${userId}`);
+    }
+    url.searchParams.set("order", "created_at.desc");
+
+    const response = await fetch(url, {
+      headers: {
+        apikey: supabaseServiceKey,
+        Authorization: `Bearer ${supabaseServiceKey}`,
+      },
+    });
+    const raw = await response.text();
+    let parsed = [];
+    if (raw) {
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        throw new Error("Supabase response was not valid JSON");
+      }
+    }
+
+    if (!response.ok) {
+      throw new Error(parsed?.message || parsed?.error || "Failed to load readings from Supabase");
+    }
+
+    return parsed.map((row) => ({
+      id: row.id,
+      type: row.kind,
+      userId: row.user_id,
+      saved: row.saved,
+      createdAt: row.created_at,
+      request: row.request,
+      response: row.response,
+      provider: row.provider,
+      model: row.model,
+      usage: row.usage,
+      error: row.error,
+    }));
+  }
+
+  const dbPath = dbPaths[kind];
   try {
     return JSON.parse(await fs.readFile(dbPath, "utf8"));
   } catch (error) {
@@ -81,9 +130,43 @@ async function readDb(dbPath) {
   }
 }
 
-async function saveReading(dbPath, record) {
+async function saveReading(kind, record) {
+  if (useSupabase) {
+    const payload = {
+      id: record.id,
+      kind,
+      user_id: record.userId,
+      saved: record.saved,
+      created_at: record.createdAt,
+      request: record.request,
+      response: record.response,
+      provider: record.provider,
+      model: record.model,
+      usage: record.usage,
+      error: record.error,
+    };
+
+    const response = await fetch(`${supabaseUrl}/rest/v1/readings`, {
+      method: "POST",
+      headers: {
+        apikey: supabaseServiceKey,
+        Authorization: `Bearer ${supabaseServiceKey}`,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const raw = await response.text();
+      throw new Error(raw || "Failed to save reading to Supabase");
+    }
+    return;
+  }
+
+  const dbPath = dbPaths[kind];
   await fs.mkdir(path.dirname(dbPath), { recursive: true });
-  const rows = await readDb(dbPath);
+  const rows = await readDb(kind);
   rows.unshift(record);
   await fs.writeFile(dbPath, JSON.stringify(rows, null, 2), "utf8");
 }
@@ -493,7 +576,7 @@ async function handleCreateReading(req, res, kind, validate) {
   };
 
   if (record.saved) {
-    await saveReading(dbPaths[kind], record);
+    await saveReading(kind, record);
   }
 
   sendJson(res, 200, { ok: true, reading: record });
@@ -506,7 +589,7 @@ async function handleSavedReadings(req, res, kind) {
     return;
   }
 
-  const rows = await readDb(dbPaths[kind]);
+  const rows = await readDb(kind, user.id);
   sendJson(res, 200, { ok: true, readings: rows.filter((row) => row.userId === user.id) });
 }
 
