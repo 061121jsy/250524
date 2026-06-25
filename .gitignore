@@ -23,6 +23,9 @@ SCREENSHOT/
 *.err
 *.pid
 *.seed
+.supabase/
+.supabase-home/
+supabase/.temp/
 
 # OS / editor noise
 .DS_Store

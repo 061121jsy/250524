@@ -4,8 +4,25 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
 };
 
-const FORTUNE_SECTION_LABELS = ["총운", "애정운", "금전운", "직장운", "학업", "성적"];
+type ReadingKind = "tarot" | "saju" | "fortune";
+
+type ReadingRecord = {
+  id: string;
+  type: ReadingKind;
+  userId: string | null;
+  saved: boolean;
+  createdAt: string;
+  request: unknown;
+  response: unknown;
+  provider: string;
+  model: string;
+  usage: unknown;
+  error: string | null;
+};
+
 const DEFAULT_OPENAI_MODEL = "gpt-5.4-mini";
+const FORTUNE_SECTION_LABELS = ["Overall", "Relationship", "Money", "Career", "Work", "Study"];
+
 const TAROT_SCHEMA = {
   type: "object",
   additionalProperties: false,
@@ -83,18 +100,8 @@ const SAJU_SCHEMA = {
         required: ["label", "value"],
       },
     },
-    strengths: {
-      type: "array",
-      minItems: 3,
-      maxItems: 3,
-      items: { type: "string" },
-    },
-    cautions: {
-      type: "array",
-      minItems: 3,
-      maxItems: 3,
-      items: { type: "string" },
-    },
+    strengths: { type: "array", minItems: 3, maxItems: 3, items: { type: "string" } },
+    cautions: { type: "array", minItems: 3, maxItems: 3, items: { type: "string" } },
     advice: { type: "string" },
     caution: { type: "string" },
   },
@@ -166,23 +173,23 @@ async function readBody(req: Request) {
   }
 }
 
+function getSupabaseUrl() {
+  return (Deno.env.get("SUPABASE_URL") || "").replace(/\/$/, "");
+}
+
 function getSupabaseSecretKey() {
-  const legacy = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-  if (legacy) return legacy;
+  const direct = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SUPABASE_KEY") || "";
+  if (direct) return direct;
 
   const raw = Deno.env.get("SUPABASE_SECRET_KEYS");
   if (!raw) return "";
 
   try {
-    const parsed = JSON.parse(raw);
+    const parsed = JSON.parse(raw) as Record<string, string>;
     return parsed.default || "";
   } catch {
     return "";
   }
-}
-
-function getSupabaseUrl() {
-  return (Deno.env.get("SUPABASE_URL") || "").replace(/\/$/, "");
 }
 
 function getOpenAIKey() {
@@ -193,27 +200,21 @@ function getOpenAIModel() {
   return Deno.env.get("OPENAI_MODEL") || DEFAULT_OPENAI_MODEL;
 }
 
-async function callOpenAI({ schemaName, schema, systemPrompt, userPayload }: { schemaName: string; schema: unknown; systemPrompt: string; userPayload: unknown }) {
+async function callOpenAI({
+  schemaName,
+  schema,
+  systemPrompt,
+  userPayload,
+}: {
+  schemaName: string;
+  schema: unknown;
+  systemPrompt: string;
+  userPayload: unknown;
+}) {
   const apiKey = getOpenAIKey();
   if (!apiKey) {
     throw new Error("OPENAI_API_KEY is missing");
   }
-
-  const body = JSON.stringify({
-    model: getOpenAIModel(),
-    input: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: JSON.stringify(userPayload) },
-    ],
-    text: {
-      format: {
-        type: "json_schema",
-        name: schemaName,
-        strict: true,
-        schema,
-      },
-    },
-  });
 
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
@@ -221,7 +222,21 @@ async function callOpenAI({ schemaName, schema, systemPrompt, userPayload }: { s
       "Content-Type": "application/json",
       Authorization: `Bearer ${apiKey}`,
     },
-    body,
+    body: JSON.stringify({
+      model: getOpenAIModel(),
+      input: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: JSON.stringify(userPayload) },
+      ],
+      text: {
+        format: {
+          type: "json_schema",
+          name: schemaName,
+          strict: true,
+          schema,
+        },
+      },
+    }),
   });
 
   const raw = await response.text();
@@ -268,7 +283,7 @@ async function saveReading(record: Record<string, unknown>) {
   }
 }
 
-async function loadReadings(kind: string, userId: string) {
+async function loadReadings(kind: ReadingKind, userId?: string | null) {
   const supabaseUrl = getSupabaseUrl();
   const supabaseKey = getSupabaseSecretKey();
   if (!supabaseUrl || !supabaseKey) {
@@ -279,7 +294,9 @@ async function loadReadings(kind: string, userId: string) {
   url.searchParams.set("select", "*");
   url.searchParams.set("kind", `eq.${kind}`);
   url.searchParams.set("saved", "eq.true");
-  url.searchParams.set("user_id", `eq.${userId}`);
+  if (userId) {
+    url.searchParams.set("user_id", `eq.${userId}`);
+  }
   url.searchParams.set("order", "created_at.desc");
 
   const response = await fetch(url, {
@@ -318,117 +335,154 @@ async function loadReadings(kind: string, userId: string) {
   }));
 }
 
-function buildFallbackTarot(input: any) {
+function fallbackTarot(input: any) {
   const cards = Array.isArray(input.cards) ? input.cards : [];
-  const positions = cards.map((card: any) => card.position || "카드");
   return {
-    headline: "타로 결과",
-    summary: `${cards.map((card: any) => card.name).filter(Boolean).join(" · ") || "선택한 카드"} 기준으로 정리한 타로 해석입니다.`,
+    headline: "Tarot reading",
+    summary: `${cards.map((card: any) => card.name).filter(Boolean).join(" / ") || "Selected cards"} are pointing to this moment.`,
     cardReadings: cards.slice(0, 3).map((card: any, index: number) => ({
-      position: positions[index] || `위치 ${index + 1}`,
-      cardName: card.name || "카드",
-      interpretation: `${card.name || "이 카드"}는 현재 흐름에서 중요한 메시지를 줍니다.`,
-      action: "지금은 감정과 상황을 함께 보고 다음 행동을 결정하세요.",
+      position: card.position || `Position ${index + 1}`,
+      cardName: card.name || "Card",
+      interpretation: `${card.name || "This card"} carries a strong message for the current situation.`,
+      action: "Pause, observe, and decide the next move after checking the facts.",
     })),
-    advice: "카드의 흐름을 한 번에 보지 말고 우선순위부터 정리하세요.",
-    caution: "조급함은 해석을 흐릴 수 있습니다.",
+    advice: "Keep the big picture in view and choose the most realistic next step.",
+    caution: "Avoid rushing decisions before the picture is clear.",
   };
 }
 
-function buildFallbackSaju(input: any) {
+function fallbackSaju(input: any) {
   const profile = input.profile || {};
   return {
-    headline: "정통사주 결과",
-    summary: `${profile.birthDate || "생년월일"}와 ${profile.birthTime || "출생시간"}를 바탕으로 정리한 사주 해석입니다.`,
+    headline: "Saju reading",
+    summary: `${profile.birthDate || "Birth date"} and ${profile.birthTime || "Birth time"} form the base of this reading.`,
     pillars: [
-      { label: "기본", value: "기본 성향과 흐름을 정리합니다." },
-      { label: "성향", value: "관계와 선택 방식이 중요합니다." },
-      { label: "직업", value: "일의 구조와 리듬을 중시합니다." },
-      { label: "흐름", value: "시기별로 집중해야 할 포인트가 있습니다." },
+      { label: "Core", value: "Your base energy is steady and practical." },
+      { label: "Mindset", value: "You do best when you keep emotions organized." },
+      { label: "Relationships", value: "Clear communication matters more than speed." },
+      { label: "Direction", value: "The current phase rewards consistency over force." },
     ],
     sections: [
-      { label: "전체", title: "전체 성향", value: "지금은 내실과 판단력이 중요합니다." },
-      { label: "일", title: "직업 흐름", value: "역할이 커질수록 정리 능력이 강점이 됩니다." },
-      { label: "관계", title: "대인 관계", value: "직설보다 조율이 더 좋은 결과를 만듭니다." },
-      { label: "재물", title: "금전 흐름", value: "지출보다 기준을 먼저 세우는 게 좋습니다." },
+      { label: "Overall", title: "General flow", value: "The day favors structure, calm choices, and steady progress." },
+      { label: "Career", title: "Work", value: "Focus on execution and leave room for small adjustments." },
+      { label: "Relationship", title: "People", value: "A direct but respectful tone will work best." },
+      { label: "Money", title: "Finances", value: "Keep spending practical and review the basics first." },
     ],
     timing: [
-      { label: "초반", value: "준비와 정리의 시기입니다." },
-      { label: "중반", value: "선택이 결과를 만듭니다." },
-      { label: "후반", value: "안정감이 올라갑니다." },
+      { label: "Now", value: "Stabilize what is already in motion." },
+      { label: "Soon", value: "A small opening appears after a short wait." },
+      { label: "Later", value: "Momentum builds once the direction is chosen." },
     ],
-    strengths: ["판단", "지구력", "책임감"],
-    cautions: ["과로", "감정 누적", "결정 지연"],
-    advice: "작은 습관부터 바꾸면 흐름이 안정됩니다.",
-    caution: "단기 반응보다 장기 흐름을 보세요.",
+    strengths: ["Steady judgement", "Practical planning", "Good timing"],
+    cautions: ["Overthinking", "Delaying decisions", "Trying to control everything"],
+    advice: "Choose one clear priority and follow through consistently.",
+    caution: "Do not treat a rough moment as a final outcome.",
   };
 }
 
-function buildFallbackFortune(input: any) {
+function fallbackFortune(input: any) {
   const profile = input.profile || {};
+  const periodLabel =
+    {
+      today: "Today",
+      tomorrow: "Tomorrow",
+      week: "This week",
+      month: "This month",
+    }[input.period] || "Today";
+
+  const fortuneTypeLabel =
+    {
+      general: "General",
+      zodiacAnimal: "Zodiac animal",
+      constellation: "Constellation",
+      fortuneCookie: "Fortune cookie",
+    }[input.fortuneType] || "General";
+
   return {
-    headline: "오늘의 운세",
-    summary: `${profile.name || "사용자"}님의 운세 흐름을 간단히 정리했습니다.`,
-    sections: FORTUNE_SECTION_LABELS.map((label, index) => ({
-      label,
-      value: index === 0 ? "전체 흐름이 무난하고, 정리하면 더 좋아집니다." : "균형 있게 움직이면 좋은 결과가 있습니다.",
-    })),
-    lucky: { color: "금색", number: "7", direction: "동쪽", item: "메모" },
-    fortuneCookie: "오늘은 서두르지 말고 먼저 우선순위를 정리하세요.",
-    advice: "할 일은 한 번에 하나씩 처리하는 편이 좋습니다.",
-    caution: "과한 확신은 손실로 이어질 수 있습니다.",
+    headline: `${periodLabel} ${fortuneTypeLabel} reading`,
+    summary: `${profile.name || "You"} have a reading that emphasizes steady choices and clear priorities.`,
+    sections: [
+      { label: "Overall", value: "A stable pace will produce the best result." },
+      { label: "Relationship", value: "Be direct and avoid unnecessary assumptions." },
+      { label: "Money", value: "Keep an eye on small expenses." },
+      { label: "Career", value: "Useful progress comes from finishing what is already open." },
+      { label: "Work", value: "Momentum improves when you simplify the task list." },
+      { label: "Study", value: "Short, focused sessions are more effective than long, unfocused ones." },
+    ],
+    lucky: { color: "Blue", number: "7", direction: "East", item: "Notebook" },
+    fortuneCookie: "A small decision made calmly can change the day.",
+    advice: "Move one step at a time and check results before scaling up.",
+    caution: "Do not confuse speed with progress.",
   };
 }
 
-async function generate(kind: string, input: any) {
+function normalizeFortuneResponse(response: any) {
+  const sourceSections = Array.isArray(response.sections) ? response.sections : [];
+  const sections = FORTUNE_SECTION_LABELS.map((label) => {
+    const matched = sourceSections.find((section: any) => section.label === label);
+    return {
+      label,
+      value: matched?.value || "No content available.",
+    };
+  });
+
+  return {
+    ...response,
+    sections,
+    sectionsByLabel: sections.reduce((acc: Record<string, string>, section) => {
+      acc[section.label] = section.value;
+      return acc;
+    }, {}),
+  };
+}
+
+async function generate(kind: ReadingKind, input: any) {
+  const fallbackByKind = {
+    tarot: fallbackTarot,
+    saju: fallbackSaju,
+    fortune: fallbackFortune,
+  };
+
+  if (!getOpenAIKey()) {
+    return { result: fallbackByKind[kind](input), provider: "fallback", model: getOpenAIModel(), usage: null, error: null };
+  }
+
   try {
     const config = {
       tarot: {
         schemaName: "tarot_reading",
         schema: TAROT_SCHEMA,
-        systemPrompt: "너는 타로 리딩 전문가다. 반드시 JSON만 출력한다.",
+        systemPrompt: "Return JSON only. Generate a tarot reading.",
         userPayload: {
-          kind,
-          mode: input.mode,
-          question: input.question,
-          cards: input.cards,
+          instruction: "Generate a reading for exactly 3 tarot cards.",
+          ...input,
         },
       },
       saju: {
         schemaName: "saju_reading",
         schema: SAJU_SCHEMA,
-        systemPrompt: "너는 정통사주 리딩 전문가다. 반드시 JSON만 출력한다.",
+        systemPrompt: "Return JSON only. Generate a saju reading.",
         userPayload: {
-          kind,
-          profile: input.profile,
-          question: input.question,
+          instruction: "Generate a reading from the supplied saju profile.",
+          ...input,
         },
       },
       fortune: {
         schemaName: "fortune_reading",
         schema: FORTUNE_SCHEMA,
-        systemPrompt: "너는 운세 해석 전문가다. 반드시 JSON만 출력한다.",
+        systemPrompt: "Return JSON only. Generate a fortune reading.",
         userPayload: {
-          kind,
-          period: input.period,
-          fortuneType: input.fortuneType,
-          profile: input.profile,
-          selectedTopics: input.selectedTopics,
+          instruction: "Generate 6 sections and reflect the selected period and fortune type.",
+          ...input,
         },
       },
     }[kind];
 
-    if (!getOpenAIKey()) {
-      const fallback = kind === "tarot" ? buildFallbackTarot(input) : kind === "saju" ? buildFallbackSaju(input) : buildFallbackFortune(input);
-      return { result: fallback, provider: "fallback", model: getOpenAIModel(), usage: null, error: null };
-    }
-
     const generated = await callOpenAI(config);
     return { result: generated.result, provider: "openai", model: getOpenAIModel(), usage: generated.usage, error: null };
   } catch (error) {
-    const fallback = kind === "tarot" ? buildFallbackTarot(input) : kind === "saju" ? buildFallbackSaju(input) : buildFallbackFortune(input);
     return {
-      result: fallback,
+      result: fallbackByKind[kind](input),
       provider: "fallback",
       model: getOpenAIModel(),
       usage: null,
@@ -438,20 +492,32 @@ async function generate(kind: string, input: any) {
 }
 
 function getKind(requestUrl: URL, body: any) {
-  return requestUrl.searchParams.get("kind") || body?.kind || "";
+  return (requestUrl.searchParams.get("kind") || body?.kind || "") as ReadingKind | "";
 }
 
-function validateBody(kind: string, body: any) {
+function validateBody(kind: ReadingKind | "", body: any) {
+  if (!["tarot", "saju", "fortune"].includes(kind)) {
+    return "kind must be tarot, saju, or fortune";
+  }
+
   if (kind === "tarot") {
-    if (!body?.mode || !Array.isArray(body.cards) || body.cards.length !== 3) return "mode and exactly 3 cards are required";
+    if (!body?.mode || !Array.isArray(body.cards) || body.cards.length !== 3) {
+      return "mode and exactly 3 cards are required";
+    }
   }
+
   if (kind === "saju") {
-    if (!body?.profile?.birthDate || !body?.profile?.birthTime) return "birthDate and birthTime are required";
+    if (!body?.profile?.birthDate || !body?.profile?.birthTime) {
+      return "birthDate and birthTime are required";
+    }
   }
+
   if (kind === "fortune") {
-    if (!body?.profile?.birthDate || !body?.fortuneType) return "birthDate and fortuneType are required";
+    if (!body?.profile?.birthDate || !body?.fortuneType) {
+      return "birthDate and fortuneType are required";
+    }
   }
-  if (!["tarot", "saju", "fortune"].includes(kind)) return "kind must be tarot, saju, or fortune";
+
   return "";
 }
 
@@ -463,10 +529,16 @@ Deno.serve(async (req) => {
   const requestUrl = new URL(req.url);
 
   if (req.method === "GET") {
-    const kind = requestUrl.searchParams.get("kind") || "";
+    const kind = requestUrl.searchParams.get("kind") as ReadingKind | "";
     const user = getUser(req);
-    if (!user.id) return getJsonResponse({ ok: false, message: "로그인이 필요합니다." }, 401);
-    if (!["tarot", "saju", "fortune"].includes(kind)) return getJsonResponse({ ok: false, message: "kind must be tarot, saju, or fortune" }, 400);
+
+    if (!user.id) {
+      return getJsonResponse({ ok: false, message: "Login required" }, 401);
+    }
+
+    if (!["tarot", "saju", "fortune"].includes(kind)) {
+      return getJsonResponse({ ok: false, message: "kind must be tarot, saju, or fortune" }, 400);
+    }
 
     try {
       const readings = await loadReadings(kind, user.id);
@@ -483,12 +555,14 @@ Deno.serve(async (req) => {
   const body = await readBody(req);
   const kind = getKind(requestUrl, body);
   const validationError = validateBody(kind, body);
-  if (validationError) return getJsonResponse({ ok: false, message: validationError }, 400);
+  if (validationError) {
+    return getJsonResponse({ ok: false, message: validationError }, 400);
+  }
 
   const user = getUser(req);
   const generated = await generate(kind, body);
-  const response = generated.result;
-  const record = {
+  const response = kind === "fortune" ? normalizeFortuneResponse(generated.result) : generated.result;
+  const record: ReadingRecord = {
     id: `${kind}_${crypto.randomUUID()}`,
     type: kind,
     userId: user.id,

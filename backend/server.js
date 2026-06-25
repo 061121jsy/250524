@@ -9,7 +9,8 @@ const port = process.env.PORT || 4001;
 const dataDir = path.join(__dirname, "data");
 const openaiModel = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const supabaseUrl = (process.env.SUPABASE_URL || "").replace(/\/$/, "");
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+const supabaseServiceKey =
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY || "";
 const useSupabase = Boolean(supabaseUrl && supabaseServiceKey);
 
 const dbPaths = {

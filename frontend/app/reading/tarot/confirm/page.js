@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import TarotCardArt from "./tarot-card-art";
+import { getReadingsUrl } from "../../../lib/api-base";
 
 function loadDraft() {
   if (typeof window === "undefined") {
@@ -43,14 +44,6 @@ function getMockAuthHeaders() {
   }
 }
 
-function getReadingsUrl(apiBase, kind) {
-  if (apiBase.includes("/functions/v1")) {
-    return `${apiBase}/readings?kind=${kind}`;
-  }
-
-  return `${apiBase}/api/${kind}/readings`;
-}
-
 export default function TarotConfirmPage() {
   const router = useRouter();
   const [draft, setDraft] = useState(null);
@@ -85,8 +78,7 @@ export default function TarotConfirmPage() {
     setMessage("");
 
     try {
-      const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4001";
-      const response = await fetch(getReadingsUrl(apiBase, "tarot"), {
+      const response = await fetch(getReadingsUrl("tarot"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

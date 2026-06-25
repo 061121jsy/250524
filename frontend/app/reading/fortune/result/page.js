@@ -46,11 +46,12 @@ function labelOf(value, map) {
 
 function normalizeSections(response) {
   const sectionsByLabel = response.sectionsByLabel || {};
-  return topicOrder.map((label) => ({
+  return topicOrder.map((label, index) => ({
     label,
     value:
       sectionsByLabel[label] ||
       response.sections?.find((item) => item.label === label)?.value ||
+      response.sections?.[index]?.value ||
       "생성된 내용이 없습니다.",
   }));
 }
@@ -62,7 +63,7 @@ export default function FortuneResultPage() {
   useEffect(() => {
     const nextReading = loadReading();
     setReading(nextReading);
-    setActiveLabel(nextReading.response?.sections?.[0]?.label || topicOrder[0]);
+    setActiveLabel(topicOrder[0]);
   }, []);
 
   const insight = useMemo(() => {

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { getReadingsUrl } from "../../lib/api-base";
 
 const periods = [
   { id: "today", label: "오늘의 운세" },
@@ -39,14 +40,6 @@ function getMockAuthHeaders() {
   }
 }
 
-function getReadingsUrl(apiBase, kind) {
-  if (apiBase.includes("/functions/v1")) {
-    return `${apiBase}/readings?kind=${kind}`;
-  }
-
-  return `${apiBase}/api/${kind}/readings`;
-}
-
 export default function FortunePage() {
   const router = useRouter();
   const [period, setPeriod] = useState("today");
@@ -75,8 +68,7 @@ export default function FortunePage() {
     setMessage("");
 
     try {
-      const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4001";
-      const response = await fetch(getReadingsUrl(apiBase, "fortune"), {
+      const response = await fetch(getReadingsUrl("fortune"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

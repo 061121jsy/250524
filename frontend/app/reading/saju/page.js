@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { getReadingsUrl } from "../../lib/api-base";
 
 function getMockAuthHeaders() {
   if (typeof window === "undefined") {
@@ -23,14 +24,6 @@ function getMockAuthHeaders() {
   } catch {
     return {};
   }
-}
-
-function getReadingsUrl(apiBase, kind) {
-  if (apiBase.includes("/functions/v1")) {
-    return `${apiBase}/readings?kind=${kind}`;
-  }
-
-  return `${apiBase}/api/${kind}/readings`;
 }
 
 export default function SajuPage() {
@@ -79,8 +72,7 @@ export default function SajuPage() {
     setMessage("");
 
     try {
-      const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4001";
-      const response = await fetch(getReadingsUrl(apiBase, "saju"), {
+      const response = await fetch(getReadingsUrl("saju"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
